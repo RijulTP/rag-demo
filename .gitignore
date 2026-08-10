@@ -1,0 +1,10 @@
+# Environment / secrets - never commit real API keys
+.env
+
+# Virtual environment
+.venv/
+venv/
+__pycache__/
+
+# ChromaDB local vector store (rebuilt by python ingest.py)
+chroma_db/

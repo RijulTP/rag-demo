@@ -7,6 +7,19 @@ and answer generation.
 
 No frameworks, no agents, no web servers. Just a few readable Python files.
 
+## Quick start (tl;dr)
+
+```bash
+git clone <your-repo-url> && cd rag-demo
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env        # then paste your Gemini API key into .env
+python ingest.py            # build the vector store from documents/
+python chat.py              # start the chatbot
+```
+
+See the sections below for details on the API key, ingestion, and usage.
+
 ## 1. What is RAG?
 
 **Retrieval-Augmented Generation** means giving a large language model (LLM)
@@ -110,8 +123,14 @@ that are not already in the database, so it won't duplicate data.
 ## 8. Run the chatbot
 
 ```bash
-python chat.py
+python chat.py            # AFTER RAG (retrieval + context)
+python chat.py --no-rag   # BEFORE RAG (Gemini only, no context) - for the demo
+python chat.py --compare  # BOTH side by side - best for the live demo
 ```
+
+The chatbot reads the retrieved chunks and the final answer from the same
+pipeline you saw in `rag.py`. In RAG mode the retrieved chunks are printed
+above the answer so you can see exactly what was passed to Gemini.
 
 Example session:
 
@@ -125,12 +144,17 @@ Question: What is the refund policy?
 
 Retrieved context:
 [1] policies.md
-We offer a 30-day money-back guarantee...
-[2] pricing.md
-The Pro plan costs $29 per user per month...
+    # Policies
+    ## Refund policy
+    We offer a **30-day money-back guarantee**...
+[2] policies.md
+    ...returned to the original payment method...
+[3] pricing.md
+    The Pro plan costs $29 per user per month...
 
 Answer:
-We offer a 30-day money-back guarantee...
+We offer a 30-day money-back guarantee... on your paid subscription, request a
+full refund by emailing support@acmewidgets.example...
 ```
 
 ## 9. Example questions
