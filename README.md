@@ -157,7 +157,19 @@ We offer a 30-day money-back guarantee... on your paid subscription, request a
 full refund by emailing support@acmewidgets.example...
 ```
 
-## 9. Example questions
+## 9. Visualize the embeddings
+
+```bash
+python visualize.py
+```
+
+This loads the vectors stored in `chroma_db/`, reduces them to 3 dimensions
+with PCA, and opens an interactive 3D scatter plot in your browser. Each point
+is a chunk, colored by its source document — hover to see the chunk text.
+Clusters form when chunks from the same document embed to nearby points in
+vector space.
+
+## 10. Example questions
 
 Try these:
 
@@ -171,7 +183,7 @@ Notice the last question: the retrieved context won't contain the answer, and
 the model is instructed to say the information is not available instead of
 guessing. This shows the difference between retrieval and generation.
 
-## 10. How the retrieved context is passed to Gemini
+## 11. How the retrieved context is passed to Gemini
 
 In `rag.py`, `answer_question` does the following:
 
@@ -208,6 +220,7 @@ rag-demo/
 ├── ingest.py         # build chunks + embeddings, store in ChromaDB
 ├── rag.py            # answer_question(): retrieve + generate
 ├── chat.py           # command-line interface
+├── visualize.py      # interactive 3D scatter plot of the stored embeddings
 ├── requirements.txt
 ├── .env.example
 └── README.md
