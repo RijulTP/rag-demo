@@ -19,7 +19,7 @@ TOP_K = 3  # number of chunks to retrieve and pass to the model
 
 
 def get_client() -> genai.Client:
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = (os.getenv("GEMINI_API_KEY") or "").replace(",", "")
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY is not set. Copy .env.example to .env and add your key.")
     return genai.Client(api_key=api_key)

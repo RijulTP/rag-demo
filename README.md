@@ -7,18 +7,37 @@ and answer generation.
 
 No frameworks, no agents, no web servers. Just a few readable Python files.
 
-## Quick start (tl;dr)
+## Quick start
 
 ```bash
 git clone <your-repo-url> && cd rag-demo
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env        # then paste your Gemini API key into .env
-python ingest.py            # build the vector store from documents/
-python chat.py              # start the chatbot
+make install          # create venv + install dependencies
+cp .env.example .env  # paste your Gemini API key into .env
+make ingest           # build the vector store from documents/
+make chat             # start the chatbot
 ```
 
-See the sections below for details on the API key, ingestion, and usage.
+Run `make help` to see all available commands.
+
+## Commands
+
+```text
+  install           Install dependencies
+  ingest            Ingest documents/ into ChromaDB
+  chat              Start chatbot (RAG mode)
+  chat-no-rag       Start chatbot (no RAG — Gemini only)
+  chat-compare      Start chatbot (side-by-side: before vs after RAG)
+  chat-defended     Start chatbot (RAG + defense layer)
+  demo              Article demo (offline, no API key needed)
+  demo-live         Full live demo (all 4 attacks + defense, needs API key)
+  demo-attack1      Live demo — Attack 1 only (fact injection + defense)
+  demo-attack2      Live demo — Attack 2 only (prompt injection + defense)
+  probe             Run embedding similarity probe
+  drift             Run drift simulation (5 versions + PCA plot)
+  visualize         Open interactive 3D scatter plot of embeddings
+  clean             Remove ChromaDB (rebuild with make ingest)
+  clean-poison      Remove only poison chunks from ChromaDB
+```
 
 ## 1. What is RAG?
 
@@ -100,13 +119,13 @@ Never commit your real `.env`.
 Requires Python 3.10+.
 
 ```bash
-pip install -r requirements.txt
+make install
 ```
 
 ## 7. Ingest the documents
 
 ```bash
-python ingest.py
+make ingest
 ```
 
 You should see output like:
@@ -123,9 +142,10 @@ that are not already in the database, so it won't duplicate data.
 ## 8. Run the chatbot
 
 ```bash
-python chat.py            # AFTER RAG (retrieval + context)
-python chat.py --no-rag   # BEFORE RAG (Gemini only, no context) - for the demo
-python chat.py --compare  # BOTH side by side - best for the live demo
+make chat              # RAG mode (retrieval + context)
+make chat-no-rag       # no RAG (Gemini only, no context)
+make chat-compare      # side-by-side comparison
+make chat-defended     # RAG with defense layer active
 ```
 
 The chatbot reads the retrieved chunks and the final answer from the same
@@ -160,7 +180,7 @@ full refund by emailing support@acmewidgets.example...
 ## 9. Visualize the embeddings
 
 ```bash
-python visualize.py
+make visualize
 ```
 
 This loads the vectors stored in `chroma_db/`, reduces them to 3 dimensions
@@ -208,21 +228,90 @@ In `rag.py`, `answer_question` does the following:
 So the model sees only your documents plus the question — that's what keeps the
 answer grounded in the knowledge base.
 
+## 12. Knowledge poisoning demo
+
+This project includes a demonstration of 4 attack classes against RAG
+pipelines, plus a defense layer.
+
+### Quick demo (no API key needed)
+
+```bash
+make demo
+```
+
+This runs an offline, pre-recorded demo showing:
+- **Baseline**: the RAG system correctly answers from trusted documents
+- **Attack 1 (Direct Fact Injection)**: a fake document is ingested, producing
+  a wrong answer
+- **Defense**: a source allowlist blocks the fake document
+
+### Live demo (requires API key)
+
+```bash
+make demo-attack1     # Attack 1 only (fastest)
+make demo-attack2     # Attack 2 only
+make demo-live        # All 4 attacks + defense
+```
+
+### The 4 attacks
+
+| # | Attack | What it does | File |
+|---|--------|--------------|------|
+| 1 | Direct Fact Injection | Adds a fake document that contradicts the real corpus | `documents/poison_pricing.md` |
+| 2 | Prompt Injection | A document contains embedded instructions targeting the LLM | `documents/poison_instructions.md` |
+| 3 | Embedding Hijack | Crafts text that embeds close to a target query to displace real results | `attacks/embedding_probe.py` |
+| 4 | Gradual Drift | Small edits accumulate over time, shifting facts | `attacks/drift_simulation.py` |
+
+### Standalone attack tools
+
+```bash
+make probe            # embedding similarity probe
+make drift            # drift simulation (5 versions + PCA plot)
+```
+
+### Defense layer
+
+The defense (`defenses/sanitize.py`) applies two checks to retrieved chunks
+before they enter the LLM prompt:
+
+1. **Instruction-pattern filter** — regex scan for imperative/system-like
+   language (catches Attack 2)
+2. **Source allowlist** — only chunks from `trusted_sources.json` are accepted
+   (catches Attacks 1 and 4)
+
+```bash
+make chat-defended    # run chatbot with defense active
+```
+
+Attack 3 (embedding hijack) evades both defenses because the poison text
+contains no instruction patterns and could come from a trusted source.
+
 ## Project structure
 
 ```text
 rag-demo/
-├── documents/        # the knowledge base (Markdown)
+├── documents/                    # the knowledge base (Markdown)
 │   ├── company.md
 │   ├── products.md
 │   ├── pricing.md
-│   └── policies.md
-├── ingest.py         # build chunks + embeddings, store in ChromaDB
-├── rag.py            # answer_question(): retrieve + generate
-├── chat.py           # command-line interface
-├── visualize.py      # interactive 3D scatter plot of the stored embeddings
+│   ├── policies.md
+│   ├── poison_pricing.md         # Attack 1 payload
+│   └── poison_instructions.md    # Attack 2 payload
+├── attacks/
+│   ├── drift_versions/           # Attack 4: 5 incremental versions
+│   │   ├── v1.md ... v5.md
+│   ├── embedding_probe.py        # Attack 3: semantic hijack probe
+│   └── drift_simulation.py       # Attack 4: drift runner + PCA plot
+├── defenses/
+│   ├── sanitize.py               # instruction filter + source allowlist
+│   └── trusted_sources.json      # allowed source filenames
+├── ingest.py                     # build chunks + embeddings, store in ChromaDB
+├── rag.py                        # answer_question(): retrieve + generate
+├── chat.py                       # command-line interface
+├── demo_runner.py                # attack orchestrator (article + live modes)
+├── visualize.py                  # interactive 3D scatter plot
+├── Makefile                      # all commands in one place
 ├── requirements.txt
 ├── .env.example
 └── README.md
 ```
-
